@@ -1,7 +1,7 @@
 ## WCEP Dataset
 This repo is still under construction!
 ### Overview
-The WCEP dataset for multi-document summarization (MDS)  consists of short, human-written summaries about news events, obtained from the [Wikipedia Current Events Portal](http://https://en.wikipedia.org/wiki/Portal:Current_events "Wikipedia Current Events Portal") (WCEP), each paired with a cluster of news articles associated with an event. These articles consist of sources cited by editors on WCEP, and are extended with articles automatically obtained from the [CommonCrawl-News dataset](https://commoncrawl.org/2016/10/news-dataset-available/http:// "CommonCrawl News dataset").
+The WCEP dataset for multi-document summarization (MDS)  consists of short, human-written summaries about news events, obtained from the [Wikipedia Current Events Portal](https://en.wikipedia.org/wiki/Portal:Current_events "Wikipedia Current Events Portal") (WCEP), each paired with a cluster of news articles associated with an event. These articles consist of sources cited by editors on WCEP, and are extended with articles automatically obtained from the [CommonCrawl-News dataset](https://commoncrawl.org/2016/10/news-dataset-available/ "CommonCrawl News dataset").
 ### Dataset Generation
 We currently do not provide the entire dataset for download. Instead, we share the summaries from WCEP and scripts that obtain the associated news articles. Make sure to set `--jobs` to your avaible number of CPUs to speed things up. Both scripts can be interrupted and resumed by just repeating the same command. To restart from scratch, add `--override`.
 
