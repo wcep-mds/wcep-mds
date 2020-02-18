@@ -47,7 +47,7 @@ def read_jsonl(path):
         for line in f:
             yield json.loads(line)
 
-val_data = list(read_jsonl('val.jsonl'))
+val_data = list(read_jsonl('data/wcep_dataset/val.jsonl'))
 c = val_data[404]
 summary = c['summary'] # human-written summary
 articles = c['articles'] # cluster of articles
