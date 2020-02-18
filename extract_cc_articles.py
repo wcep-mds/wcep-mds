@@ -13,7 +13,9 @@ from warcio.archiveiterator import ArchiveIterator
 def read_warc_gz(path):
     with open(path, 'rb') as f:
         for record in ArchiveIterator(f):
-            yield record
+            # records are queries followed by response, we only need response
+            if record.content_type == 'application/http; msgtype=response':
+                yield record
 
 
 def get_record_id(record):
@@ -32,8 +34,8 @@ def download_cc_file(cc_path, local_cc_path):
     logging.debug(cmd)
     cmd = cmd.split()
     while not local_cc_path.exists():
+        p = subprocess.Popen(cmd)
         try:
-            p = subprocess.Popen(cmd)
             p.wait()
         except KeyboardInterrupt:
             p.terminate()
@@ -79,6 +81,7 @@ def extract_article(item):
 
         article = {
             'id': item['id'],
+            'cc_file': item['cc_file'],
             'time': time,
             'title': extracted.title,
             'text': extracted.text,
@@ -92,7 +95,7 @@ def extract_article(item):
     return article
 
 
-def extract_batch(items, jobs):
+def process_batch(items, out_path, jobs):
     logging.debug('extracting articles...')
     pool = multiprocessing.Pool(processes=jobs)
     try:
@@ -103,6 +106,9 @@ def extract_batch(items, jobs):
     except KeyboardInterrupt:
         pool.terminate()
         sys.exit()
+    write_jsonl(articles, out_path, mode='a')
+    new_record_ids = [x['id'] for x in items]
+    logging.info(f'done-record-ids:{" ".join(new_record_ids)}')
     return articles
 
 
@@ -155,9 +161,12 @@ def main(args):
     if args.override and logpath.exists():
         logpath.unlink()
 
-    logging.basicConfig(level=logging.DEBUG,
-                        filename=logpath,
-                        filemode=('w' if args.override else 'a'))
+    logging.basicConfig(
+        level=logging.DEBUG,
+        filename=logpath,
+        filemode=('w' if args.override else 'a'),
+        format='%(asctime)s %(levelname)-8s %(message)s'
+    )
     logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     mute_other_loggers()
 
@@ -184,7 +193,8 @@ def main(args):
         n_found_articles = 0
         for i, record in enumerate(read_warc_gz(local_cc_path)):
             if i % 10000 == 0:
-                logging.debug(f'{i} records checked, {n_found_articles} articles found')
+                logging.debug(
+                    f'{i} records checked, {n_found_articles} articles found')
             id = get_record_id(record)
             if id in todo_record_ids:
                 n_found_articles += 1
@@ -193,21 +203,16 @@ def main(args):
                     'html': record.content_stream().read(),
                     'url': get_record_url(record),
                     'collection': id_to_collection[id],
+                    'cc_file': cc_file
                 }
                 batch.append(item)
 
             if len(batch) >= args.batchsize:
-                articles = extract_batch(batch, args.jobs)
-                write_jsonl(articles, out_path, mode='a')
-                done_record_ids |= set([x['id'] for x in batch])
+                process_batch(batch, out_path, args.jobs)
                 batch = []
 
         if batch:
-            articles = extract_batch(batch, args.jobs)
-            write_jsonl(articles, out_path, mode='a')
-            logging.info(f'done-cc-file:{cc_file}')
-            new_record_ids = [x['id'] for x in batch]
-            logging.info(f'done-record-ids:{" ".join(new_record_ids)}')
+            process_batch(batch, out_path, args.jobs)
 
         logging.info(f'done-cc-file:{cc_file}')
         local_cc_path.unlink()
