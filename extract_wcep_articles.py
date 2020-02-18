@@ -34,7 +34,7 @@ def extract_article(todo_article):
     except Exception as e:
         print(e)
         article = {
-            'url': url,
+            'archive_url': url,
             'state': 'failed',
             'error': str(e),
         }
@@ -42,9 +42,9 @@ def extract_article(todo_article):
     return article
 
 
-def write_articles(articles, path):
-    lines = [json.dumps(a) for a in articles]
-    with open(path, 'a') as f:
+def write_jsonl(items, path, mode='a'):
+    lines = [json.dumps(x) for x in items]
+    with open(path, mode) as f:
         f.write('\n'.join(lines) + '\n')
 
 
@@ -93,12 +93,15 @@ def main(args):
     todo_articles = [a for a in todo_articles if a['archive_url']
                      not in done_urls]
 
+    print('failed articles from last run:', len(failed_articles))
+    print('articles todo:', len(todo_articles))
+
+
     if args.repeat_failed:
         todo_articles = failed_articles + todo_articles
 
     if args.shuffle:
         random.shuffle(todo_articles)
-
 
     durations = []
     t1 = time.time()
@@ -113,11 +116,11 @@ def main(args):
             if a['state'] == 'successful':
                 n_success += 1
                 articles.append(a)
+                done_urls.add(a['archive_url'])
             n_done += 1
-            done_urls.add(url)
 
         if articles:
-            write_articles(articles, outpath)
+            write_jsonl(articles, outpath, mode='a')
 
         t2 = time.time()
         elapsed = t2 - t1
